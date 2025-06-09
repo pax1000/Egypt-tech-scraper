@@ -5,7 +5,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
-import json
 
 def sigma_scraper(product_name):
     url = "https://www.sigma-computer.com/home"
@@ -61,12 +60,11 @@ def sigma_scraper(product_name):
             except Exception as e:
                 print(f"Error parsing item: {e}")
     
-        with open("data.json", "w") as f:
-            json.dump(data, f, indent=2)
+        return data
     
     except TimeoutException:
         print("Timeout: Products did not load in time.")
-    
+        raise
     finally:
         driver.quit()
    

@@ -73,17 +73,16 @@ def elnekhelyt_scraper(product_name):
                     'in_stock': True,
                     'store':'elnekhely'
                 })
-    
+            return data 
+            
         except Exception as e:
             print('error:', type(e).__name__, str(e))
-        #* write JSON after all data is collected
-        with open("data.json", "w", encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+            return data  # Return whatever data was collected before the error
             
             
     except Exception as e:
          print('error:', type(e).__name__, str(e))
-            
+         raise  
     
     
     finally:
