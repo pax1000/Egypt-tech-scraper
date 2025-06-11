@@ -4,26 +4,30 @@ from elbadrgroupeg import elbadrgroupeg_scraper
 from compumarts import compumarts_scraper
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 #* Get data from different sites and merge them into a single JSON file
 def scrape_with_retry(scraper_function, product_name):
-#* get the data from the scraper 
-        try:
-            data =  scraper_function(product_name)
-        except Exception as e:
-            print(f'error {e}')
-            index = 3
-            while index > 0:
-                try:
-                    data =  scraper_function(product_name)
-                    break  # success, exit retry loop
-                except Exception as e:
-                    index -= 1
-                    print(f'number of retries left is {index}, error: {e}')
-            else:
-#! All retries failed
-                data  = []
-        return data
+    try:
+        data = scraper_function(product_name)
+        if not isinstance(data, list):  # Ensure it's a list
+            data = []
+    except Exception as e:
+        print(f'Initial attempt failed: {e}')
+        index = 3
+        while index > 0:
+            print(f"Retrying... attempts left: {index}")
+            try:
+                data = scraper_function(product_name)
+                if not isinstance(data, list):
+                    data = []
+                break
+            except Exception as e:
+                index -= 1
+                print(f'number of retries left is {index}, error: {e}')
+        else:
+            data = []  # All retries failed
+    return data
 #* Merge all the scraped data lists and add them to the data.json file
 def merged_data():
  #* the user input the name of the product they want to search or skip to use another method
@@ -32,11 +36,20 @@ def merged_data():
             print("No product name provided. Skipping data scraping.")
             return
 #* get the data from each scraper
-        sigma_data = scrape_with_retry(sigma_scraper,product_name)
-        elnekhelyt_data = scrape_with_retry(elnekhelyt_scraper,product_name)
-        elbadrgroupeg_data = scrape_with_retry(elbadrgroupeg_scraper,product_name)
-        compumarts_data = scrape_with_retry(compumarts_scraper,product_name)
-        merged_data = sigma_data + elnekhelyt_data + elbadrgroupeg_data + compumarts_data
+        with ThreadPoolExecutor() as executor:
+            # Submit scraper tasks
+            future_sigma = executor.submit(scrape_with_retry, sigma_scraper, product_name)
+            future_elnekhelyt = executor.submit(scrape_with_retry, elnekhelyt_scraper, product_name)
+            future_elbadrgroupeg = executor.submit(scrape_with_retry, elbadrgroupeg_scraper, product_name)
+            future_compumarts = executor.submit(scrape_with_retry, compumarts_scraper, product_name)
+    
+            # Wait for all results
+            sigma_data = future_sigma.result()
+            elnekhelyt_data = future_elnekhelyt.result()
+            elbadrgroupeg_data = future_elbadrgroupeg.result()
+            compumarts_data = future_compumarts.result()
+            merged_data = sigma_data + elnekhelyt_data + elbadrgroupeg_data + compumarts_data
+            
         with open("data.json", "w", encoding='utf-8') as f:
             json.dump(merged_data, f, indent=2, ensure_ascii=False)
 
@@ -45,7 +58,8 @@ def load_data():
     with open('data.json', 'r', encoding='utf-8') as f:
         return json.load(f)
 
-def filter_by_price():
+
+def filter_by_price(data):
     data = load_data()
     # Get min and max price from user
     min_price = input("Input minimum price to filter: ")
@@ -61,26 +75,41 @@ def filter_by_price():
         price = int(''.join(re.findall(r'[0-9]', price_str))) if price_str else 0
         if min_price <= price <= max_price:
             filtered.append(item)
-
+    return filtered
 
 #* filter the product by included name like cpu or gpu or motherboard..
-def search_products():
+def filter_by_name(data):
     products_name = input('Input product name or part of it like ryzen or intel: ').strip()
     if not products_name:
         print('No product name selected')
-        return
-
+        return data
     filtered = []
-    all_data = load_data()
-    for data in all_data:
-        words = data['title'].split()
+    for item in data:
+        words = item['title'].split()
         for word in words:
             if re.search(fr'{products_name}', word, re.IGNORECASE):
-                filtered.append(data)
+                filtered.append(item)
                 break
-    print(filtered)
+    return filtered
+#* filter by avilabilty
+
+def filter_by_stock(data):
+    filtered = []
+    for item in data:
+        if item['in_stock']:
+            filtered.append(item)
+    return filtered
 
 
+
+def main_processing():
+    merged_data()
+    data = load_data()
+    data = filter_by_price(data)
+    data = filter_by_name(data)
+    data = filter_by_stock(data)
+    with open('filtered.json', 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 
 
@@ -89,6 +118,4 @@ def search_products():
 
 #* calling the functions
 if __name__ == "__main__":
-   merged_data()
-   filter_by_price() 
-   search_products()
+   main_processing()

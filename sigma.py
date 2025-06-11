@@ -56,9 +56,12 @@ def sigma_scraper(product_name):
                     'in_stock': in_stock,
                     'store':'sigma'
                 })
-    
+        
             except Exception as e:
                 print(f"Error parsing item: {e}")
+        for item in data:
+            if not item['in_stock']:
+                data.pop(item)
     
         return data
     
