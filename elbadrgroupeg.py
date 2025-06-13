@@ -20,6 +20,8 @@ def elbadrgroupeg_scraper(product_name):
             else:
                 logging.info('Captcha bypassed successfully')
 
+
+
 #* wait 5 second then stop the loading of the page and then searsh for the product
             time.sleep(5)
             sb.driver.execute_script("window.stop();")
@@ -80,5 +82,5 @@ def elbadrgroupeg_scraper(product_name):
             return data
     
     except Exception as e:
-        logging.warning(f'thier was an error {e}')
+        logging.error(f'❌ elnekhely elbadrgroupeg failed: {e}')
         raise

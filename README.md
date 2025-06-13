@@ -3,6 +3,7 @@ A Python-based scraper to extract product data (title, price, availability, and 
 - [`elbadrgroupeg.store`](https://elbadrgroupeg.store/)
 - [`elnekhelytechnology.com`](https://www.elnekhelytechnology.com/)
 - [`sigma-computer.com`](https://www.sigma-computer.com/)
+- [`compumarts.com`](https://www.compumarts.com/)
 
 ## 🚀 Features
 
@@ -18,12 +19,12 @@ root/
 ├── scrapers/
 │ ├── elbadrgroupeg.py
 │ ├── elnekhely.py
+│ ├── compumarts.py
 │ └── sigma.py
 │
-├── data/
-│ ├── elbadr_data.json
-│ ├── elnekhely_data.json
-│ └── sigma_data.json
+├── data.json
+├── filtered.json
+│ 
 │
 ├── utils/ # Optional: helpers for scrolling/logging
 │ └── helpers.py

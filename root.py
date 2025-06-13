@@ -8,8 +8,8 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('seleniumbase').setLevel(logging.ERROR)
-logging.getLogger('seleniumbase.core.browser_launcher').setLevel(logging.ERROR)
-logging.getLogger('seleniumbase.plugins.pytest_plugin').setLevel(logging.ERROR)
+logging.getLogger('selenium').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 #* Get data from different sites and merge them into a single JSON file
 def scrape_with_retry(scraper_function, product_name):
@@ -47,7 +47,6 @@ def merged_data():
             future_elnekhelyt = executor.submit(scrape_with_retry, elnekhelyt_scraper, product_name)
             future_elbadrgroupeg = executor.submit(scrape_with_retry, elbadrgroupeg_scraper, product_name)
             future_compumarts = executor.submit(scrape_with_retry, compumarts_scraper, product_name)
-    
             # Wait for all results
             sigma_data = future_sigma.result()
             elnekhelyt_data = future_elnekhelyt.result()
@@ -104,8 +103,6 @@ def filter_by_stock(data):
         if item['in_stock']:
             filtered.append(item)
     return filtered
-
-
 
 def main_processing():
     merged_data()
