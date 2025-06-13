@@ -4,11 +4,11 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import TimeoutException
 import time
+import logging
 
 def elnekhelyt_scraper(product_name):
-    
+    logging.info('🔍 scraping elnekhelyt...')
     url = 'https://www.elnekhelytechnology.com/'
     
     
@@ -17,10 +17,8 @@ def elnekhelyt_scraper(product_name):
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
-    
     driver = webdriver.Chrome(options=chrome_options)
     driver.get(url)
-    
     try:
     #* wait for the cookies and click it
         WebDriverWait(driver,5).until(
@@ -33,8 +31,6 @@ def elnekhelyt_scraper(product_name):
         filter_box = driver.find_element(By.CLASS_NAME,'filter-checkbox')
         instock_click = filter_box.find_element(By.TAG_NAME,'input')
         instock_click.click()
-    
-    
     #* wait until the caption class apear and then extract the data from it
         WebDriverWait(driver,3).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME,'caption'))
@@ -42,8 +38,6 @@ def elnekhelyt_scraper(product_name):
     #* INFINITE  scroll to the end of the page
         previous_height = driver.execute_script('return document.body.scrollHeight')
         data = []
-    
-    
         while True:
             driver.execute_script('window.scrollTo(0, document.body.scrollHeight)')
             time.sleep(2)
@@ -72,20 +66,18 @@ def elnekhelyt_scraper(product_name):
                     'in_stock': True,
                     'store':'elnekhely'
                 })
+            logging.info('finshed scrapping elnekhely')
             return data 
-            
         except Exception as e:
-            print('error:', type(e).__name__, str(e))
-            return data  # Return whatever data was collected before the error
-            
+            logging.error('error:', type(e).__name__, str(e))
+            raise
             
     except Exception as e:
-         print('error:', type(e).__name__, str(e))
+         logging.error('error:', type(e).__name__, str(e))
          raise  
     
     
     finally:
-        
         driver.quit()
 
 

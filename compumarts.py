@@ -1,12 +1,11 @@
 from seleniumbase import SB
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-import json
 import time
+import logging
 
 def compumarts_scraper(product_name):
+    logging.info('🔍 scraping compumarts...')
     with SB(test=True, uc=True ,headless=True) as sb:
         sb.open("https://www.compumarts.com/")
         driver = sb.driver
@@ -45,8 +44,9 @@ def compumarts_scraper(product_name):
                         'in_stock': True,
                         'store':'compumarts'
                     })
+            logging.info('finshed scrapping compumarts')
             return data
         except Exception as e:
-            print(f'error{e}')
+            logging.error(f'error{e}')
             raise
         

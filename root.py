@@ -5,6 +5,11 @@ from compumarts import compumarts_scraper
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor
+import logging
+logging.basicConfig(level=logging.INFO)
+logging.getLogger('seleniumbase').setLevel(logging.ERROR)
+logging.getLogger('seleniumbase.core.browser_launcher').setLevel(logging.ERROR)
+logging.getLogger('seleniumbase.plugins.pytest_plugin').setLevel(logging.ERROR)
 
 #* Get data from different sites and merge them into a single JSON file
 def scrape_with_retry(scraper_function, product_name):
@@ -16,7 +21,7 @@ def scrape_with_retry(scraper_function, product_name):
         print(f'Initial attempt failed: {e}')
         index = 3
         while index > 0:
-            print(f"Retrying... attempts left: {index}")
+            print(f"Retrying... attempts left: {index} name of the scraper {scraper_function}")
             try:
                 data = scraper_function(product_name)
                 if not isinstance(data, list):

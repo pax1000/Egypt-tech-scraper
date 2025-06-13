@@ -5,6 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
+import logging
 
 def sigma_scraper(product_name):
     url = "https://www.sigma-computer.com/home"
@@ -15,11 +16,11 @@ def sigma_scraper(product_name):
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
-    
     driver = webdriver.Chrome(options=chrome_options)
     driver.get(url)
     
     try:
+        logging.info('🔍 scraping sigma...')
         search_box = driver.find_element(By.CLASS_NAME, "autosearch-input")
         search_box.send_keys(product_name + Keys.ENTER)
     
@@ -58,15 +59,12 @@ def sigma_scraper(product_name):
                 })
         
             except Exception as e:
-                print(f"Error parsing item: {e}")
-        for item in data:
-            if not item['in_stock']:
-                data.pop(item)
-    
+                logging.error(f"Error parsing item: {e}")
+        logging.info('finshed scrapping sigma')
         return data
     
     except TimeoutException:
-        print("Timeout: Products did not load in time.")
+        logging.error("Timeout: Products did not load in time.")
         raise
     finally:
         driver.quit()
