@@ -1,0 +1,3 @@
+seleniumbase
+python-dotenv
+mysql-connector-python
