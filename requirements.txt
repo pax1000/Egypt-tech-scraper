@@ -1,3 +1,4 @@
-seleniumbase
+bs4
+requests
 python-dotenv
 mysql-connector-python

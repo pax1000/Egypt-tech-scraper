@@ -1,0 +1,49 @@
+name: Daily Product Scraper
+
+on:
+  schedule:
+    # Runs daily at 2 AM UTC (adjust timezone as needed)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allows manual triggering for testing
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60  # Prevent jobs from running too long
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'  # Cache pip dependencies
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+    
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run scraper
+      env:
+        DB_HOST: ${{ secrets.DB_HOST }}
+        DB_PORT: ${{ secrets.DB_PORT }}
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASS: ${{ secrets.DB_PASS }}
+        DB_NAME: ${{ secrets.DB_NAME }}
+      run: |
+        python main.py
+    
+    - name: Upload logs (if scraper fails)
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: scraper-logs
+        path: scraper.log
