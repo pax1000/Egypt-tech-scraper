@@ -1,75 +1,65 @@
-from seleniumbase import SB
-from selenium.webdriver.common.by import By
+import requests
+from bs4 import BeautifulSoup
 import logging
-import time
-import pprint
 
 def elnekhely_scraper(product_name):
-    try:
-        with SB(uc=True,headless=True,headless2=True) as sb:
-            logging.info('🔍 scraping elnekhely...')
-            url = f'https://www.elnekhelytechnology.com/index.php?route=product/search&search={product_name}'
-            sb.open(url)
-            sb.driver.set_window_size(1920, 1080)
+    logging.info('🔍 scraping elnekhely...')
+    
+    data = []  # List to store scraped product data
+    page_number = 1  # Start from the first page
 
-            #* Close cookie notification
-            sb.wait_for_element_present('.notification-close', timeout=5)
-            sb.click('.notification-close')
-            #* Click filter checkbox
-            sb.wait_for_element_present('.filter-checkbox')
-            sb.click('.filter-checkbox input')
-            sb.wait_for_element_absent(".journal-loading-overlay")
-            #* Wait for initial product captions
-            sb.wait_for_element_visible('.caption', timeout=10)
+    while True:
+        try:
+            # Construct the search URL with product name and current page number
+            url = f"https://www.elnekhelytechnology.com/index.php?route=product/search&search={product_name}&page={page_number}"
+            r = requests.get(url, timeout=40)
+            soup = BeautifulSoup(r.text, 'html.parser')
 
-            #* Infinite scroll until no more results
-            sb.driver.set_window_size(1920, 1080)
-            while not sb.is_element_present('.ias-noneleft'):
-                captions = sb.find_elements(".caption")  # Fresh reference
-                if captions:
-                    try:
-                        sb.driver.execute_script(
-                            "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
-                            captions[-1]
-                        )
-                        time.sleep(2)  
-                    except Exception as e:
-                        logging.warning(f"Scrolling issue: {e}")
-                        break
-                else:
-                    break
+            # Find all product blocks; stop if none found
+            products_container = soup.find('div', class_='main-products')
+            if not products_container or not products_container.find_all('div', class_='product-layout'):
+                break
 
-            #* Final fresh capture of all captions
-            captions = sb.find_elements(".caption")
-            data = []
-            for caption in captions:
-                try:
-                    price = None
-                    a_tag = caption.find_element(By.CLASS_NAME, 'name').find_element(By.TAG_NAME, 'a')
-                    title = a_tag.get_attribute('title')
-                    product_link = a_tag.get_attribute('href')
+            main_products = products_container.find_all('div', class_='product-layout')
 
-                    spans = caption.find_elements(By.TAG_NAME, 'span')
-                    for span in spans:
-                        if span.get_attribute('class') in ['price-normal', 'price-new']:
-                            price = span.text
+            for product in main_products:
+                # Extract product title and link
+                name_block = product.find('div', class_='name').find('a')
+                title = name_block.text
+                link = name_block.get('href')
 
-                    data.append({
-                        'title': title,
-                        'price': price,
-                        'link': product_link,
-                        'in_stock': True,
-                        'store': 'elnekhely'
-                    })
-                except Exception as e:
-                    logging.warning(f"Failed to parse one caption block: {e}")
-                    continue
+                in_stock = True  # Default to in stock
+                price = None
 
-            logging.info('✅ Finished scraping elnekhely')
-            return data
+                # Check product label for stock status
+                product_label = product.find('span', class_='product-label')
+                if product_label:
+                    label_text = product_label.text.strip()
+                    if label_text in ['Out Of Stock', 'Coming Soon', 'In Stock']:
+                        in_stock = False
 
-    except Exception as e:
-        logging.error(f'❌ elnekhely scraper failed: {e}')
-        raise
+                # Get the price from either 'price-normal' or 'price-new'
+                price_spans = product.find('div', class_='price').find_all('span')
+                for span in price_spans:
+                    span_class = span.get('class')[0]
+                    if span_class in ['price-normal', 'price-new']:
+                        price = span.text
 
+                # Append product data to the result list
+                data.append({
+                    'title': title,
+                    'price': price,
+                    'link': link,
+                    'in_stock': in_stock,
+                    'store': 'elnekhely'
+                })
 
+            print(f'finished scraping this page {page_number}')
+            page_number += 1  # Move to the next page
+
+        except Exception as e:
+            logging.error(f'❌ compumarts scraper failed: {e}')
+            break
+
+    logging.info('✅ Finished scraping elnekhely')
+    return data
