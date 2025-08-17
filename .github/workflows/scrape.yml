@@ -1,49 +1,39 @@
-name: Daily Product Scraper
+name: daily-scrape
 
 on:
   schedule:
-    # Runs daily at 2 AM UTC (adjust timezone as needed)
-    - cron: '0 2 * * *'
-  workflow_dispatch: # Allows manual triggering for testing
+    # 03:00 UTC = 06:00 Cairo
+    - cron: "0 3 * * *"
+  workflow_dispatch: {} # lets you trigger manually
 
 jobs:
-  scrape:
+  run:
     runs-on: ubuntu-latest
-    timeout-minutes: 60  # Prevent jobs from running too long
-    
+    timeout-minutes: 45
+
+    env:
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASS: ${{ secrets.DB_PASS }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      PYTHONUNBUFFERED: "1"
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-        cache: 'pip'  # Cache pip dependencies
-    
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
-    
-    - name: Install Python dependencies
-      run: |
-        pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Run scraper
-      env:
-        DB_HOST: ${{ secrets.DB_HOST }}
-        DB_PORT: ${{ secrets.DB_PORT }}
-        DB_USER: ${{ secrets.DB_USER }}
-        DB_PASS: ${{ secrets.DB_PASS }}
-        DB_NAME: ${{ secrets.DB_NAME }}
-      run: |
-        python main.py
-    
-    - name: Upload logs (if scraper fails)
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: scraper-logs
-        path: scraper.log
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run scheduled scraper
+        run: |
+          python main.py
