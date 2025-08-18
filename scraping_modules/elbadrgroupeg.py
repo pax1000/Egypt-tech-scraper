@@ -54,14 +54,12 @@ def elbadrgroupeg_scraper(product_name):
                     'store': 'elbadrgroupeg'
                 })
 
-            print(f'finished scraping this page {page_number}')
+            logging.info(f'finished scraping this page {page_number}')
             page_number += 1  # Move to next page
 
         except Exception as e:
-            print(f'there was an error as {e}')  # Print the error
+            logging.error(f'there was an error as {e}')  # Log the error
             break
 
     logging.info('✅finshed scrapping elbadrgroupeg')  # Log completion
     return data
-
-
