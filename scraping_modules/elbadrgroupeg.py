@@ -1,4 +1,4 @@
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 import logging
 
@@ -7,6 +7,9 @@ def elbadrgroupeg_scraper(product_name):
 
     data = []  # List to store product info
     page_number = 1  # Start from the first page
+
+    # Create a CloudScraper session (handles Cloudflare)
+    scraper = cloudscraper.create_scraper()
 
     headers = {
         "User-Agent": (
@@ -22,7 +25,9 @@ def elbadrgroupeg_scraper(product_name):
         try:
             # Construct the search URL with the product name and current page
             url = f"https://elbadrgroupeg.store/index.php?route=product/search&search={product_name}&page={page_number}"
-            r = requests.get(url, headers=headers, timeout=40)
+            
+            # Use cloudscraper to get the page
+            r = scraper.get(url, headers=headers, timeout=40)
             soup = BeautifulSoup(r.text, 'html.parser')
 
             # Find all product blocks; stop the loop if none found
