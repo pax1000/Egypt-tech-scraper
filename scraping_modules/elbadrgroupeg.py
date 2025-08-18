@@ -8,16 +8,27 @@ def elbadrgroupeg_scraper(product_name):
     data = []  # List to store product info
     page_number = 1  # Start from the first page
 
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/115.0 Safari/537.36"
+        ),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    }
+
     while True:
         try:
             # Construct the search URL with the product name and current page
             url = f"https://elbadrgroupeg.store/index.php?route=product/search&search={product_name}&page={page_number}"
-            r = requests.get(url, timeout=40)
+            r = requests.get(url, headers=headers, timeout=40)
             soup = BeautifulSoup(r.text, 'html.parser')
 
             # Find all product blocks; stop the loop if none found
             products_container = soup.find('div', class_='main-products')
             if not products_container or not products_container.find_all('div', class_='product-layout'):
+                logging.warning(f"No products found on page {page_number}. First 500 chars of response:\n{r.text[:500]}")
                 break
 
             main_products = products_container.find_all('div', class_='product-layout')
@@ -25,7 +36,7 @@ def elbadrgroupeg_scraper(product_name):
             for product in main_products:
                 # Extract the product title and link
                 name_block = product.find('div', class_='name').find('a')
-                title = name_block.text
+                title = name_block.text.strip()
                 link = name_block.get('href')
 
                 in_stock = True  # Assume product is in stock
@@ -39,11 +50,13 @@ def elbadrgroupeg_scraper(product_name):
                         in_stock = False
 
                 # Find and extract the price
-                price_spans = product.find('div', class_='price').find_all('span')
-                for span in price_spans:
-                    span_class = span.get('class')[0]
-                    if span_class in ['price-normal', 'price-new']:
-                        price = span.text
+                price_div = product.find('div', class_='price')
+                if price_div:
+                    price_spans = price_div.find_all('span')
+                    for span in price_spans:
+                        classes = span.get('class', [])
+                        if any(cls in ['price-normal', 'price-new'] for cls in classes):
+                            price = span.text.strip()
 
                 # Add the product data to the list
                 data.append({
