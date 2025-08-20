@@ -1,7 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 import logging
-import json
 logging.basicConfig(level=logging.INFO,)
 
 
@@ -74,7 +73,3 @@ def compumarts_scraper(product_name):
     logging.info('✅finshed scrapping compumarts')
     return data
 
-
-
-with open('data.json','w') as f:
-    json.dump(compumarts_scraper('Core i7'),f,indent=4)
