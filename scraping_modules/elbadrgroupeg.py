@@ -1,83 +1,76 @@
-import cloudscraper
-from bs4 import BeautifulSoup
+from seleniumbase import SB
+from selenium.webdriver.common.by import By
+import time
 import logging
 
 def elbadrgroupeg_scraper(product_name):
-    logging.info('🔍 scraping elbadrgroupeg...')  # Log the start of the scraping process
+        with SB(uc=True,headless=True,headless2=True) as sb:
+            logging.info("🔍 Scraping elbadrgroupeg...")
 
-    data = []  # List to store product info
-    page_number = 1  # Start from the first page
-
-    # Create a CloudScraper session (handles Cloudflare)
-    scraper = cloudscraper.create_scraper()
-
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/115.0 Safari/537.36"
-        ),
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    }
-
-    while True:
-        try:
-            # Construct the search URL with the product name and current page
-            url = f"https://elbadrgroupeg.store/index.php?route=product/search&search={product_name}&page={page_number}"
+            # Construct direct search URL to skip UI interaction
+            url = f"https://elbadrgroupeg.store/index.php?route=product/search&search={product_name}"
             
-            # Use cloudscraper to get the page
-            r = scraper.get(url, headers=headers, timeout=40)
-            soup = BeautifulSoup(r.text, 'html.parser')
+            # Open the page with 20 reconnect retries to bypass Cloudflare challenges
+            sb.driver.uc_open_with_reconnect(url, 20)
+            time.sleep(5)  # Allow page to settle (initial wait)
+            sb.driver.set_window_size(1920, 1080)
+            # Check if captcha still appears (i.e., challenge not bypassed)
+            if sb.is_element_present('.main-content'):
+                logging.error('Captcha bypass failed after 20 attempts')
+                raise
+            else:
+                logging.info('Captcha bypassed successfully')
+                
+            #* Remove out-of-stock items via filter checkbox interaction
+            sb.wait_for_element_present(".filter-checkbox label", timeout=3)
+            labels = sb.find_elements(".filter-checkbox label")
+            labels[-2].click()  # Click second-to-last label (likely the in-stock filter)
+            sb.wait_for_element_absent(".journal-loading-overlay", timeout=10)  # Wait for filtering to finish
+    
+            #* Initiate a list to store scraped product data
+            data = [] 
 
-            # Find all product blocks; stop the loop if none found
-            products_container = soup.find('div', class_='main-products')
-            if not products_container or not products_container.find_all('div', class_='product-layout'):
-                logging.warning(f"No products found on page {page_number}. First 500 chars of response:\n{r.text[:500]}")
-                break
+            #* Wait for products section to load, then capture all product entries
+            sb.wait_for_element_present(".main-products", timeout=5)
+            products = sb.find_element(".main-products").find_elements(By.CLASS_NAME,'caption')
 
-            main_products = products_container.find_all('div', class_='product-layout')
-
-            for product in main_products:
-                # Extract the product title and link
-                name_block = product.find('div', class_='name').find('a')
-                title = name_block.text.strip()
-                link = name_block.get('href')
-
-                in_stock = True  # Assume product is in stock
-                price = None  # Initialize price
-
-                # Check for "Out Of Stock" or "Coming Soon" labels
-                product_label = product.find('span', class_='product-label')
-                if product_label:
-                    label_text = product_label.text.strip()
-                    if label_text in ['Out Of Stock', 'Coming Soon']:
-                        in_stock = False
-
-                # Find and extract the price
-                price_div = product.find('div', class_='price')
-                if price_div:
-                    price_spans = price_div.find_all('span')
-                    for span in price_spans:
-                        classes = span.get('class', [])
-                        if any(cls in ['price-normal', 'price-new'] for cls in classes):
-                            price = span.text.strip()
-
-                # Add the product data to the list
+            #* INFINITE scroll logic — continues until `.ias-noneleft` is visible (end of pagination)
+            while not sb.is_element_visible('.ias-noneleft'):
+                # Scroll to last loaded product to trigger lazy loading
+                sb.driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",products[-1])
+                
+                # Wait for page readiness and confirm new products appear
+                sb.wait_for_ready_state_complete()
+                sb.wait_for_element_present(".caption", timeout=5)
+                products = sb.find_element(".main-products").find_elements(By.CLASS_NAME,'caption')
+                
+                try:
+                    #* Find and click all visible "load more" buttons (pagination)
+                    next_buttons = sb.find_elements('.ias-trigger-next')
+                    for btn in next_buttons:
+                        if btn.is_displayed():
+                            btn.click()
+                            sb.wait_for_ready_state_complete()
+                except Exception as e:
+                    logging.error(f'There was an error: {e}')
+            
+            #* Extract title, price, and link from each product block
+            for product in products:  
+                title = product.find_element(By.CLASS_NAME, 'name').find_element(By.TAG_NAME, 'a').text
+                product_link = product.find_element(By.CLASS_NAME, 'name').find_element(By.TAG_NAME, 'a').get_attribute('href')
+                price = None
+                spans = product.find_elements(By.TAG_NAME,'span')
+                for span in spans:
+                    if span.get_attribute('class') == 'price-normal' or span.get_attribute('class') == 'price-new':
+                        price = span.text
                 data.append({
-                    'title': title,
-                    'price': price,
-                    'link': link,
-                    'in_stock': in_stock,
-                    'store': 'elbadrgroupeg'
-                })
+                        'title': title,
+                        'price': price,
+                        'link': product_link,
+                        'in_stock': True,
+                        'store':'elbadrgroupeg'
+                    })
 
-            logging.info(f'finished scraping this page {page_number}')
-            page_number += 1  # Move to next page
+            logging.info('✅finshed scrapping elbadrgroupeg')
+            return data
 
-        except Exception as e:
-            logging.error(f'there was an error as {e}')  # Log the error
-            break
-
-    logging.info('✅finshed scrapping elbadrgroupeg')  # Log completion
-    return data
