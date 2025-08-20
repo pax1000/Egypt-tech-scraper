@@ -1,6 +1,10 @@
 import requests
 from bs4 import BeautifulSoup
 import logging
+import json
+logging.basicConfig(level=logging.INFO,)
+
+
 
 def compumarts_scraper(product_name):
     logging.info('🔍 scraping compumarts...')
@@ -46,7 +50,7 @@ def compumarts_scraper(product_name):
 
                 # Default to in stock unless "Sold out" is found
                 in_stock = True
-                label_container = product.find('div', class_='product-label-container')
+                label_container = product.find('span', class_='product-label--sold-out')
                 if label_container:
                     if label_container.text.strip() == 'Sold out':
                         in_stock = False
@@ -69,3 +73,8 @@ def compumarts_scraper(product_name):
 
     logging.info('✅finshed scrapping compumarts')
     return data
+
+
+
+with open('data.json','w') as f:
+    json.dump(compumarts_scraper('Core i7'),f,indent=4)
