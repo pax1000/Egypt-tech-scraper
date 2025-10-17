@@ -61,7 +61,7 @@ def elnekhely_scraper(product_name):
             page_number += 1  # Move to the next page
 
         except Exception as e:
-            logging.error(f'❌ compumarts scraper failed: {e}')
+            logging.error(f'❌ elnekhely scraper failed: {e}')
             break
 
     logging.info('✅ Finished scraping elnekhely')
