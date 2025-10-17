@@ -1,6 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
 import logging
+import json
+
+logging.basicConfig(level=logging.INFO)
 
 def elnekhely_scraper(product_name):
     logging.info('🔍 scraping elnekhely...')
@@ -32,7 +35,7 @@ def elnekhely_scraper(product_name):
                 price = None
 
                 # Check product label for stock status
-                product_label = product.find('span', class_='product-label')
+                product_label = product.find('div',class_='product-labels')
                 if product_label:
                     label_text = product_label.text.strip()
                     if label_text in ['Out Of Stock', 'Coming Soon', 'In Stock']:
